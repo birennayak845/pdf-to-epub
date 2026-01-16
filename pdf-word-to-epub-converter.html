@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF/Word to EPUB Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            margin-bottom: 30px;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            background: #f8f9ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .file-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .convert-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 20px;
+        }
+
+        .convert-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .convert-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .progress-container {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 18px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: none;
+        }
+
+        .download-btn.show {
+            display: block;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .supported-formats {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .supported-formats h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .format-list {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .format-badge {
+            background: #f8f9ff;
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: #667eea;
+            font-weight: 500;
+            border: 1px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 EPUB Converter</h1>
+        <p class="subtitle">Convert PDF and Word documents to Kindle-compatible EPUB format</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Drop your file here or click to browse</div>
+            <div class="upload-hint">Supports PDF and Word (.docx) files</div>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.doc">
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            <div class="file-name" id="fileName"></div>
+            <div class="file-size" id="fileSize"></div>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <div class="progress-text" id="progressText">Processing...</div>
+        </div>
+
+        <button class="convert-btn" id="convertBtn" disabled>Convert to EPUB</button>
+        <button class="download-btn" id="downloadBtn">Download EPUB</button>
+
+        <div class="supported-formats">
+            <h3>Supported Formats</h3>
+            <div class="format-list">
+                <span class="format-badge">PDF</span>
+                <span class="format-badge">Word (.docx)</span>
+                <span class="format-badge">EPUB Output</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <script>
+        // Initialize PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+        const convertBtn = document.getElementById('convertBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const message = document.getElementById('message');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+
+        let selectedFile = null;
+        let epubBlob = null;
+
+        // File input change handler
+        fileInput.addEventListener('change', handleFileSelect);
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop handlers
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        function handleFileSelect(e) {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+            const validExtensions = ['.pdf', '.docx', '.doc'];
+            
+            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
+            
+            if (!validTypes.includes(file.type) && !validExtensions.includes(fileExtension)) {
+                showMessage('Please select a PDF or Word document file.', 'error');
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.classList.add('show');
+            convertBtn.disabled = false;
+            downloadBtn.classList.remove('show');
+            epubBlob = null;
+            hideMessage();
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message show ${type}`;
+        }
+
+        function hideMessage() {
+            message.classList.remove('show');
+        }
+
+        function updateProgress(percent, text) {
+            progressFill.style.width = percent + '%';
+            progressFill.textContent = percent + '%';
+            progressText.textContent = text || 'Processing...';
+        }
+
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            convertBtn.disabled = true;
+            progressContainer.classList.add('show');
+            hideMessage();
+            updateProgress(10, 'Reading file...');
+
+            try {
+                const fileExtension = '.' + selectedFile.name.split('.').pop().toLowerCase();
+                
+                if (fileExtension === '.pdf') {
+                    await convertPDFToEPUB(selectedFile);
+                } else if (fileExtension === '.docx' || fileExtension === '.doc') {
+                    await convertWordToEPUB(selectedFile);
+                } else {
+                    throw new Error('Unsupported file format');
+                }
+            } catch (error) {
+                console.error('Conversion error:', error);
+                showMessage('Conversion failed: ' + error.message, 'error');
+                progressContainer.classList.remove('show');
+                convertBtn.disabled = false;
+            }
+        });
+
+        async function convertWordToEPUB(file) {
+            updateProgress(20, 'Converting Word document...');
+            
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+            
+            updateProgress(60, 'Creating EPUB structure...');
+            
+            const htmlContent = result.value;
+            const title = file.name.replace(/\.[^/.]+$/, '');
+            
+            await createEPUB(title, htmlContent);
+        }
+
+        async function convertPDFToEPUB(file) {
+            updateProgress(20, 'Reading PDF document...');
+            
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            
+            const numPages = pdf.numPages;
+            let htmlContent = '';
+            
+            updateProgress(30, `Extracting text from ${numPages} pages...`);
+            
+            for (let i = 1; i <= numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                
+                const pageText = textContent.items
+                    .map(item => item.str)
+                    .join(' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                
+                if (pageText) {
+                    htmlContent += `<p>${escapeHtml(pageText)}</p>\n`;
+                }
+                
+                updateProgress(30 + (i / numPages) * 40, `Processing page ${i} of ${numPages}...`);
+            }
+            
+            if (!htmlContent.trim()) {
+                throw new Error('Could not extract text from PDF. The PDF might be image-based or encrypted.');
+            }
+            
+            updateProgress(70, 'Creating EPUB structure...');
+            
+            const title = file.name.replace(/\.[^/.]+$/, '');
+            await createEPUB(title, htmlContent);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function createEPUB(title, htmlContent) {
+            updateProgress(80, 'Generating EPUB file...');
+            
+            const zip = new JSZip();
+            
+            // MIME type
+            zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
+            
+            // META-INF/container.xml
+            const containerXml = `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`;
+            zip.folder('META-INF').file('container.xml', containerXml);
+            
+            // OEBPS/content.opf
+            const contentOpf = `<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="bookid" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="bookid">urn:uuid:${generateUUID()}</dc:identifier>
+    <dc:title>${escapeXml(title)}</dc:title>
+    <dc:language>en</dc:language>
+    <dc:creator>EPUB Converter</dc:creator>
+    <meta property="dcterms:modified">${new Date().toISOString()}</meta>
+  </metadata>
+  <manifest>
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+    <item id="chapter1" href="chapter1.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine toc="ncx">
+    <itemref idref="nav"/>
+    <itemref idref="chapter1"/>
+  </spine>
+</package>`;
+            zip.folder('OEBPS').file('content.opf', contentOpf);
+            
+            // OEBPS/chapter1.xhtml
+            const chapterXhtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+  <title>${escapeXml(title)}</title>
+  <style>
+    body { font-family: serif; padding: 1em; line-height: 1.6; }
+    p { margin: 1em 0; }
+  </style>
+</head>
+<body>
+  <h1>${escapeXml(title)}</h1>
+  ${htmlContent}
+</body>
+</html>`;
+            zip.folder('OEBPS').file('chapter1.xhtml', chapterXhtml);
+            
+            // OEBPS/nav.xhtml
+            const navXhtml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
+<head>
+  <title>Navigation</title>
+</head>
+<body>
+  <nav epub:type="toc">
+    <ol>
+      <li><a href="chapter1.xhtml">${escapeXml(title)}</a></li>
+    </ol>
+  </nav>
+</body>
+</html>`;
+            zip.folder('OEBPS').file('nav.xhtml', navXhtml);
+            
+            // OEBPS/toc.ncx
+            const tocNcx = `<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head>
+    <meta name="dtb:uid" content="urn:uuid:${generateUUID()}"/>
+    <meta name="dtb:depth" content="1"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle>
+    <text>${escapeXml(title)}</text>
+  </docTitle>
+  <navMap>
+    <navPoint id="navpoint-1" playOrder="1">
+      <navLabel>
+        <text>${escapeXml(title)}</text>
+      </navLabel>
+      <content src="chapter1.xhtml"/>
+    </navPoint>
+  </navMap>
+</ncx>`;
+            zip.folder('OEBPS').file('toc.ncx', tocNcx);
+            
+            updateProgress(95, 'Finalizing EPUB...');
+            
+            epubBlob = await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip' });
+            
+            updateProgress(100, 'Conversion complete!');
+            
+            setTimeout(() => {
+                progressContainer.classList.remove('show');
+                showMessage('Conversion successful! Click download to save your EPUB file.', 'success');
+                downloadBtn.classList.add('show');
+                convertBtn.disabled = false;
+            }, 500);
+        }
+
+        function escapeXml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            if (!epubBlob) return;
+            
+            const url = URL.createObjectURL(epubBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = selectedFile.name.replace(/\.[^/.]+$/, '') + '.epub';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
